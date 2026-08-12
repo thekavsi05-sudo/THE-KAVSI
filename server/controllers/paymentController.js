@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { priceCart, hashCartRequest } from '../utils/pricing.js';
 import { razorpayClient } from '../utils/razorpayClient.js';
 import PaymentIntent from '../models/PaymentIntent.js';
+import Order from '../models/Order.js';
 import { asyncHandler } from '../middleware/errorMiddleware.js';
 
 const INTENT_TTL_MINUTES = 30;
@@ -49,6 +50,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     });
   }
 
+  // Razorpay requires amount in paise
   const amountPaise = Math.round(totalAmount * 100);
 
   const razorpayOrder = await razorpayClient.orders.create({
@@ -164,8 +166,8 @@ export async function checkPaymentIntent({
  * Creates a Razorpay refund for a captured payment.
  *
  * amountRupees:
- *   If supplied, creates a partial refund.
- *   If omitted, creates a full refund.
+ * If supplied, creates a partial refund.
+ * If omitted, creates a full refund.
  *
  * Returns:
  * {
@@ -196,8 +198,8 @@ export async function refundRazorpayPayment({
   /*
    * Razorpay amount is always in paise.
    *
-   * If amountRupees is not provided, Razorpay will create
-   * a full refund for the captured payment.
+   * If amountRupees is not provided,
+   * Razorpay will create a full refund.
    */
   if (
     amountRupees !== undefined &&
@@ -207,7 +209,10 @@ export async function refundRazorpayPayment({
       Number(amountRupees) * 100
     );
 
-    if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+    if (
+      !Number.isFinite(amountPaise) ||
+      amountPaise <= 0
+    ) {
       throw new Error(
         'Refund amount must be greater than zero.'
       );
@@ -278,6 +283,9 @@ export const razorpayWebhook = asyncHandler(
       });
     }
 
+    /*
+     * Razorpay webhook signature verification
+     */
     const expected = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
@@ -332,6 +340,9 @@ export const razorpayWebhook = asyncHandler(
         });
       }
 
+      /*
+       * Don't process an already-used payment intent.
+       */
       if (intent.status === 'used') {
         return res.json({
           success: true,
@@ -339,15 +350,23 @@ export const razorpayWebhook = asyncHandler(
         });
       }
 
+      /*
+       * Successful payment
+       */
       if (
         event === 'payment.captured' ||
         event === 'order.paid'
       ) {
         if (intent.status !== 'paid') {
           intent.status = 'paid';
+
           intent.razorpayPaymentId =
             razorpayPaymentId;
 
+          /*
+           * Keep the successful payment intent
+           * for audit/reconciliation.
+           */
           intent.expiresAt = new Date(
             Date.now() +
               5 *
@@ -359,11 +378,27 @@ export const razorpayWebhook = asyncHandler(
           );
 
           await intent.save();
+
+          console.log(
+            'Razorpay payment captured:',
+            razorpayPaymentId
+          );
         }
-      } else if (event === 'payment.failed') {
+      }
+
+      /*
+       * Failed payment
+       */
+      else if (event === 'payment.failed') {
         if (intent.status === 'created') {
           intent.status = 'failed';
+
           await intent.save();
+
+          console.log(
+            'Razorpay payment failed:',
+            razorpayPaymentId
+          );
         }
       }
     }
@@ -377,8 +412,12 @@ export const razorpayWebhook = asyncHandler(
 
     if (refundEntity) {
       const refundId = refundEntity.id;
+
       const refundPaymentId =
         refundEntity.payment_id;
+
+      const refundAmountPaise =
+        refundEntity.amount || 0;
 
       console.log(
         'Razorpay refund webhook:',
@@ -386,20 +425,119 @@ export const razorpayWebhook = asyncHandler(
         'refund:',
         refundId,
         'payment:',
-        refundPaymentId
+        refundPaymentId,
+        'amount:',
+        refundAmountPaise
       );
 
       /*
-       * We don't update Order here because paymentController
-       * deliberately does not import Order.
-       *
-       * The refund is created by the admin cancellation flow.
-       * The refund ID/status is already stored on the order
-       * there.
-       *
-       * This webhook is primarily used as a reliable Razorpay
-       * confirmation/reconciliation event.
+       * Find the KAVSI order using the Razorpay
+       * payment ID.
        */
+      const order = await Order.findOne({
+        razorpayPaymentId: refundPaymentId,
+      });
+
+      if (!order) {
+        console.warn(
+          'Razorpay refund webhook: Order not found for payment:',
+          refundPaymentId
+        );
+
+        /*
+         * Return 200 so Razorpay does not repeatedly
+         * retry an event that doesn't belong to a
+         * known KAVSI order.
+         */
+        return res.json({
+          success: true,
+          message: 'No matching order',
+        });
+      }
+
+      /*
+       * =================================================
+       * REFUND CREATED
+       * =================================================
+       *
+       * Razorpay has created the refund.
+       * It may still be processing.
+       */
+      if (event === 'refund.created') {
+        order.refundStatus = 'Pending';
+
+        order.razorpayRefundId =
+          refundId;
+
+        order.refundAmount =
+          refundAmountPaise / 100;
+
+        await order.save();
+
+        console.log(
+          `Refund created for ${order.orderId}: ${refundId}`
+        );
+      }
+
+      /*
+       * =================================================
+       * REFUND PROCESSED
+       * =================================================
+       *
+       * This is the important final success event.
+       */
+      else if (
+        event === 'refund.processed'
+      ) {
+        order.refundStatus = 'Processed';
+
+        order.paymentStatus = 'Refunded';
+
+        order.razorpayRefundId =
+          refundId;
+
+        order.refundAmount =
+          refundAmountPaise / 100;
+
+        order.refundedAt = new Date();
+
+        order.refundFailureReason = '';
+
+        await order.save();
+
+        console.log(
+          `Razorpay refund processed successfully for ${order.orderId}: ${refundId}`
+        );
+      }
+
+      /*
+       * =================================================
+       * REFUND FAILED
+       * =================================================
+       */
+      else if (
+        event === 'refund.failed'
+      ) {
+        order.refundStatus = 'Failed';
+
+        order.razorpayRefundId =
+          refundId;
+
+        order.refundAmount =
+          refundAmountPaise / 100;
+
+        order.refundFailureReason =
+          refundEntity?.error_description ||
+          refundEntity?.error_reason ||
+          'Razorpay refund failed';
+
+        await order.save();
+
+        console.error(
+          `Razorpay refund failed for ${order.orderId}:`,
+          order.refundFailureReason
+        );
+      }
     }
 
     /* =====================================================
