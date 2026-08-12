@@ -1,13 +1,15 @@
-import { Link } from 'react-router-dom'
-import { Star } from 'lucide-react'
-import { getTotalStock, getStockStatus } from '../utils/variants'
+import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
+import { getTotalStock, getStockStatus } from "../utils/variants";
 
 export default function ProductCard({ product }) {
-  const hasDiscount = product.discount > 0
-  const finalPrice = Math.round(product.price * (1 - (product.discount || 0) / 100))
-  const totalStock = getTotalStock(product)
-  const stockStatus = getStockStatus(totalStock, product.lowStockThreshold)
-  const outOfStock = stockStatus === 'out'
+  const hasDiscount = product.discount > 0;
+  const finalPrice = Math.round(
+    product.price * (1 - (product.discount || 0) / 100),
+  );
+  const totalStock = getTotalStock(product);
+  const stockStatus = getStockStatus(totalStock, product.lowStockThreshold);
+  const outOfStock = stockStatus === "out";
 
   return (
     <Link to={`/product/${product._id}`} className="group block">
@@ -37,24 +39,30 @@ export default function ProductCard({ product }) {
             Out of Stock
           </span>
         )}
-        {!outOfStock && stockStatus === 'low' && (
+        {!outOfStock && stockStatus === "low" && (
           <span className="absolute top-3 right-3 bg-champagne text-ink text-[10px] font-semibold tracking-wide px-2 py-1">
             Low Stock
           </span>
         )}
       </div>
       <div className="mt-3 space-y-1">
-        <p className="text-[11px] uppercase tracking-wide text-stone">{product.category}</p>
+        <p className="text-[11px] uppercase tracking-wide text-stone">
+          {product.category}
+        </p>
         <h3 className="text-sm font-medium text-ink group-hover:text-wine transition-colors line-clamp-1">
           {product.name}
         </h3>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-ink">₹{finalPrice.toLocaleString('en-IN')}</span>
+          <span className="text-sm font-semibold text-ink">
+            ₹{finalPrice.toLocaleString("en-IN")}
+          </span>
           {hasDiscount && (
-            <span className="text-xs text-stone line-through">₹{product.price.toLocaleString('en-IN')}</span>
+            <span className="text-xs text-stone line-through">
+              ₹{product.price.toLocaleString("en-IN")}
+            </span>
           )}
         </div>
-        {product.rating && (
+        {Number(product.rating) > 0 && (
           <div className="flex items-center gap-1 text-xs text-stone">
             <Star size={12} className="fill-champagne text-champagne" />
             {product.rating}
@@ -62,5 +70,5 @@ export default function ProductCard({ product }) {
         )}
       </div>
     </Link>
-  )
+  );
 }
