@@ -11,7 +11,7 @@ import sareesImage from "../assets/categories/sarees.jpeg";
 import dressesImage from "../assets/categories/dresses.jpeg";
 import topsImage from "../assets/categories/tops.jpeg";
 import coordSetsImage from "../assets/categories/coord-sets.jpeg";
-import ethnicWearImage from "../assets/categories/ethnic-wear.jpeg";
+import ethnicWearImage from "../assets/categories/Ethnic-wear.jpeg";
 
 import coverImage from "../assets/categories/coverimg.png";
 
