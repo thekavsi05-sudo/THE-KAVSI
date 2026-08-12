@@ -9,7 +9,7 @@ const INTENT_TTL_MINUTES = 30;
 
 /* =========================================================
    CREATE RAZORPAY ORDER
-   ========================================================= */
+========================================================= */
 
 // POST /api/payments/razorpay/order
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
@@ -50,7 +50,6 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  // Razorpay requires amount in paise
   const amountPaise = Math.round(totalAmount * 100);
 
   const razorpayOrder = await razorpayClient.orders.create({
@@ -71,7 +70,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     ),
   });
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       razorpayOrderId: razorpayOrder.id,
@@ -85,7 +84,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
 
 /* =========================================================
    CHECK PAYMENT INTENT
-   ========================================================= */
+========================================================= */
 
 export async function checkPaymentIntent({
   razorpayOrderId,
@@ -160,14 +159,14 @@ export async function checkPaymentIntent({
 
 /* =========================================================
    REFUND RAZORPAY PAYMENT
-   ========================================================= */
+========================================================= */
 
 /**
  * Creates a Razorpay refund for a captured payment.
  *
  * amountRupees:
- * If supplied, creates a partial refund.
- * If omitted, creates a full refund.
+ * - If supplied, creates a partial refund.
+ * - If omitted, creates a full refund.
  *
  * Returns:
  * {
@@ -198,8 +197,8 @@ export async function refundRazorpayPayment({
   /*
    * Razorpay amount is always in paise.
    *
-   * If amountRupees is not provided,
-   * Razorpay will create a full refund.
+   * If amountRupees is not provided, Razorpay will create
+   * a full refund for the captured payment.
    */
   if (
     amountRupees !== undefined &&
@@ -252,13 +251,17 @@ export async function refundRazorpayPayment({
 
 /* =========================================================
    RAZORPAY WEBHOOK
-   ========================================================= */
+========================================================= */
 
 // POST /api/payments/webhook
 export const razorpayWebhook = asyncHandler(
   async (req, res) => {
     const secret =
       process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    /* =====================================================
+       CHECK WEBHOOK SECRET
+    ===================================================== */
 
     if (!secret) {
       console.error(
@@ -270,6 +273,10 @@ export const razorpayWebhook = asyncHandler(
         message: 'Webhook not configured',
       });
     }
+
+    /* =====================================================
+       GET SIGNATURE + RAW BODY
+    ===================================================== */
 
     const signature =
       req.headers['x-razorpay-signature'];
@@ -283,9 +290,10 @@ export const razorpayWebhook = asyncHandler(
       });
     }
 
-    /*
-     * Razorpay webhook signature verification
-     */
+    /* =====================================================
+       VERIFY SIGNATURE
+    ===================================================== */
+
     const expected = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
@@ -309,11 +317,20 @@ export const razorpayWebhook = asyncHandler(
       });
     }
 
+    /* =====================================================
+       GET EVENT
+    ===================================================== */
+
     const event = req.body?.event;
+
+    console.log(
+      'Razorpay webhook received:',
+      event
+    );
 
     /* =====================================================
        PAYMENT EVENTS
-       ===================================================== */
+    ===================================================== */
 
     const paymentEntity =
       req.body?.payload?.payment?.entity;
@@ -324,9 +341,6 @@ export const razorpayWebhook = asyncHandler(
     const razorpayPaymentId =
       paymentEntity?.id;
 
-    /*
-     * Payment events
-     */
     if (razorpayOrderId) {
       const intent =
         await PaymentIntent.findOne({
@@ -334,15 +348,17 @@ export const razorpayWebhook = asyncHandler(
         });
 
       if (!intent) {
+        console.log(
+          'No matching payment intent:',
+          razorpayOrderId
+        );
+
         return res.json({
           success: true,
           message: 'No matching payment intent',
         });
       }
 
-      /*
-       * Don't process an already-used payment intent.
-       */
       if (intent.status === 'used') {
         return res.json({
           success: true,
@@ -350,9 +366,10 @@ export const razorpayWebhook = asyncHandler(
         });
       }
 
-      /*
-       * Successful payment
-       */
+      /* =================================================
+         PAYMENT CAPTURED / ORDER PAID
+      ================================================= */
+
       if (
         event === 'payment.captured' ||
         event === 'order.paid'
@@ -364,31 +381,32 @@ export const razorpayWebhook = asyncHandler(
             razorpayPaymentId;
 
           /*
-           * Keep the successful payment intent
-           * for audit/reconciliation.
+           * Keep the payment intent alive long enough
+           * for the order creation flow to complete.
            */
           intent.expiresAt = new Date(
             Date.now() +
-              5 *
-                365 *
-                24 *
-                60 *
-                60 *
-                1000
+            5 *
+            365 *
+            24 *
+            60 *
+            60 *
+            1000
           );
 
           await intent.save();
 
           console.log(
-            'Razorpay payment captured:',
-            razorpayPaymentId
+            'Payment intent marked as paid:',
+            razorpayOrderId
           );
         }
       }
 
-      /*
-       * Failed payment
-       */
+      /* =================================================
+         PAYMENT FAILED
+      ================================================= */
+
       else if (event === 'payment.failed') {
         if (intent.status === 'created') {
           intent.status = 'failed';
@@ -396,8 +414,8 @@ export const razorpayWebhook = asyncHandler(
           await intent.save();
 
           console.log(
-            'Razorpay payment failed:',
-            razorpayPaymentId
+            'Payment intent marked as failed:',
+            razorpayOrderId
           );
         }
       }
@@ -405,7 +423,7 @@ export const razorpayWebhook = asyncHandler(
 
     /* =====================================================
        REFUND EVENTS
-       ===================================================== */
+    ===================================================== */
 
     const refundEntity =
       req.body?.payload?.refund?.entity;
@@ -417,7 +435,12 @@ export const razorpayWebhook = asyncHandler(
         refundEntity.payment_id;
 
       const refundAmountPaise =
-        refundEntity.amount || 0;
+        Number(refundEntity.amount);
+
+      const refundAmountRupees =
+        Number.isFinite(refundAmountPaise)
+          ? refundAmountPaise / 100
+          : undefined;
 
       console.log(
         'Razorpay refund webhook:',
@@ -427,77 +450,73 @@ export const razorpayWebhook = asyncHandler(
         'payment:',
         refundPaymentId,
         'amount:',
-        refundAmountPaise
+        refundAmountRupees
       );
 
-      /*
-       * Find the KAVSI order using the Razorpay
-       * payment ID.
-       */
+      /* =================================================
+         FIND ORDER
+      ================================================= */
+
       const order = await Order.findOne({
         razorpayPaymentId: refundPaymentId,
       });
 
       if (!order) {
         console.warn(
-          'Razorpay refund webhook: Order not found for payment:',
+          'Refund webhook: Order not found for payment:',
           refundPaymentId
         );
 
         /*
-         * Return 200 so Razorpay does not repeatedly
-         * retry an event that doesn't belong to a
-         * known KAVSI order.
+         * We still return 200 because Razorpay successfully
+         * delivered the webhook. This prevents unnecessary
+         * webhook retries.
          */
         return res.json({
           success: true,
-          message: 'No matching order',
+          message: 'Refund received but order not found',
         });
       }
 
-      /*
-       * =================================================
-       * REFUND CREATED
-       * =================================================
-       *
-       * Razorpay has created the refund.
-       * It may still be processing.
-       */
+      /* =================================================
+         REFUND CREATED
+      ================================================= */
+
       if (event === 'refund.created') {
+        order.razorpayRefundId = refundId;
+
+        if (refundAmountRupees !== undefined) {
+          order.refundAmount =
+            refundAmountRupees;
+        }
+
+        /*
+         * Keep status Pending until Razorpay confirms
+         * that the refund was actually processed.
+         */
         order.refundStatus = 'Pending';
-
-        order.razorpayRefundId =
-          refundId;
-
-        order.refundAmount =
-          refundAmountPaise / 100;
 
         await order.save();
 
         console.log(
-          `Refund created for ${order.orderId}: ${refundId}`
+          'Order refund status updated to Pending:',
+          order.orderId
         );
       }
 
-      /*
-       * =================================================
-       * REFUND PROCESSED
-       * =================================================
-       *
-       * This is the important final success event.
-       */
-      else if (
-        event === 'refund.processed'
-      ) {
+      /* =================================================
+         REFUND PROCESSED
+      ================================================= */
+
+      else if (event === 'refund.processed') {
+        order.razorpayRefundId = refundId;
+
+        if (refundAmountRupees !== undefined) {
+          order.refundAmount =
+            refundAmountRupees;
+        }
+
         order.refundStatus = 'Processed';
-
-        order.paymentStatus = 'Refunded';
-
-        order.razorpayRefundId =
-          refundId;
-
-        order.refundAmount =
-          refundAmountPaise / 100;
 
         order.refundedAt = new Date();
 
@@ -506,35 +525,45 @@ export const razorpayWebhook = asyncHandler(
         await order.save();
 
         console.log(
-          `Razorpay refund processed successfully for ${order.orderId}: ${refundId}`
+          'Order refund marked as PROCESSED:',
+          order.orderId,
+          'refund:',
+          refundId,
+          'amount:',
+          refundAmountRupees
         );
       }
 
-      /*
-       * =================================================
-       * REFUND FAILED
-       * =================================================
-       */
-      else if (
-        event === 'refund.failed'
-      ) {
+      /* =================================================
+         REFUND FAILED
+      ================================================= */
+
+      else if (event === 'refund.failed') {
+        order.razorpayRefundId = refundId;
+
+        if (refundAmountRupees !== undefined) {
+          order.refundAmount =
+            refundAmountRupees;
+        }
+
         order.refundStatus = 'Failed';
 
-        order.razorpayRefundId =
-          refundId;
-
-        order.refundAmount =
-          refundAmountPaise / 100;
+        order.refundedAt = null;
 
         order.refundFailureReason =
           refundEntity?.error_description ||
           refundEntity?.error_reason ||
+          refundEntity?.error_code ||
           'Razorpay refund failed';
 
         await order.save();
 
         console.error(
-          `Razorpay refund failed for ${order.orderId}:`,
+          'Order refund marked as FAILED:',
+          order.orderId,
+          'refund:',
+          refundId,
+          'reason:',
           order.refundFailureReason
         );
       }
@@ -542,7 +571,7 @@ export const razorpayWebhook = asyncHandler(
 
     /* =====================================================
        ACKNOWLEDGE WEBHOOK
-       ===================================================== */
+    ===================================================== */
 
     return res.json({
       success: true,
