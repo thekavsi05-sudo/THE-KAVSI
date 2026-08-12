@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+ html {
+  scroll-behavior: auto;
+  }
+  body {
+    @apply bg-ivory text-ink font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  :focus-visible {
+    outline: 2px solid theme('colors.wine.DEFAULT');
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply text-[11px] tracking-widest2 uppercase text-champagne font-semibold;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-wine text-ivory px-6 py-3 text-sm font-semibold tracking-wide uppercase hover:bg-wine-dark transition-colors duration-200 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 border border-ink/20 text-ink px-6 py-3 text-sm font-semibold tracking-wide uppercase hover:border-wine hover:text-wine transition-colors duration-200;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 text-ink/70 px-4 py-2 text-sm font-medium hover:text-wine transition-colors duration-200;
+  }
+  .input-field {
+    @apply w-full border border-ink/15 bg-white px-4 py-3 text-sm text-ink placeholder:text-stone focus:border-wine focus:outline-none transition-colors;
+  }
+  .section-label {
+    @apply flex items-center gap-3 mb-3;
+  }
+  .ribbon-rule {
+    @apply h-[2px] bg-gradient-to-r from-wine via-champagne to-transparent w-16 origin-left;
+  }
+}
+
+/* Custom scrollbar for a refined feel */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #FAF6F1; }
+::-webkit-scrollbar-thumb { background: #C7B8A9; border-radius: 8px; }
