@@ -386,8 +386,27 @@ export default function Checkout() {
         ondismiss: () => setSubmitting(false),
       },
     });
-    razorpay.on("payment.failed", () => {
-      toast.error("Payment failed. Please try again.");
+    razorpay.on("payment.failed", (response) => {
+      console.error("RAZORPAY PAYMENT FAILED:", response);
+
+      const error = response?.error;
+
+      console.error("Razorpay error details:", {
+        code: error?.code,
+        description: error?.description,
+        source: error?.source,
+        step: error?.step,
+        reason: error?.reason,
+        orderId: error?.metadata?.order_id,
+        paymentId: error?.metadata?.payment_id,
+      });
+
+      toast.error(
+        error?.description ||
+          error?.reason ||
+          "Payment failed. Please try again.",
+      );
+
       setSubmitting(false);
     });
     razorpay.open();
