@@ -66,7 +66,7 @@ const productSchema = new mongoose.Schema(
       index: true,
     },
 
-    // NEW: Product sub-category
+    // Product sub-category
     subCategory: {
       type: String,
       default: '',
@@ -176,6 +176,57 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+/* =========================================================
+   SLUG HELPERS
+   ========================================================= */
+
+function slugify(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/* =========================================================
+   CREATE UNIQUE SLUG
+   ========================================================= */
+
+productSchema.statics.makeUniqueSlug = async function (
+  name,
+  excludeProductId = null
+) {
+  const baseSlug = slugify(name) || 'product';
+
+  let slug = baseSlug;
+  let counter = 2;
+
+  while (true) {
+    const query = {
+      slug,
+    };
+
+    // When editing a product, don't consider that same product
+    // a duplicate of itself.
+    if (excludeProductId) {
+      query._id = { $ne: excludeProductId };
+    }
+
+    const existingProduct = await this.findOne(query).select('_id').lean();
+
+    if (!existingProduct) {
+      return slug;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+};
+
+/* =========================================================
+   INDEXES
+   ========================================================= */
+
 // Category + sub-category filtering
 productSchema.index({
   category: 1,
@@ -199,6 +250,7 @@ productSchema.index({
   isActive: 1,
 });
 
+// Text search
 productSchema.index({
   name: 'text',
   description: 'text',
@@ -206,6 +258,10 @@ productSchema.index({
   subCategory: 'text',
   tags: 'text',
 });
+
+/* =========================================================
+   MODEL
+   ========================================================= */
 
 const Product =
   mongoose.models.Product ||
