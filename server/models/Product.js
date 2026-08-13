@@ -159,6 +159,21 @@ const productSchema = new mongoose.Schema(
       max: 5,
     },
 
+    // Product discount percentage
+    discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+
+    // Stock level at which the product is considered low stock
+    lowStockThreshold: {
+      type: Number,
+      default: 5,
+      min: 0,
+    },
+
     reviewCount: {
       type: Number,
       default: 0,
@@ -178,7 +193,7 @@ const productSchema = new mongoose.Schema(
 
 /* =========================================================
    SLUG HELPERS
-   ========================================================= */
+========================================================= */
 
 function slugify(value) {
   return String(value || '')
@@ -190,7 +205,7 @@ function slugify(value) {
 
 /* =========================================================
    CREATE UNIQUE SLUG
-   ========================================================= */
+========================================================= */
 
 productSchema.statics.makeUniqueSlug = async function (
   name,
@@ -212,7 +227,9 @@ productSchema.statics.makeUniqueSlug = async function (
       query._id = { $ne: excludeProductId };
     }
 
-    const existingProduct = await this.findOne(query).select('_id').lean();
+    const existingProduct = await this.findOne(query)
+      .select('_id')
+      .lean();
 
     if (!existingProduct) {
       return slug;
@@ -225,7 +242,7 @@ productSchema.statics.makeUniqueSlug = async function (
 
 /* =========================================================
    INDEXES
-   ========================================================= */
+========================================================= */
 
 // Category + sub-category filtering
 productSchema.index({
@@ -261,7 +278,7 @@ productSchema.index({
 
 /* =========================================================
    MODEL
-   ========================================================= */
+========================================================= */
 
 const Product =
   mongoose.models.Product ||

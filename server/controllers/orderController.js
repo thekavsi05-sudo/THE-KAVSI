@@ -86,6 +86,7 @@ export const calculateOrderPrice = asyncHandler(async (req, res) => {
   const {
     pricedItems,
     subtotal,
+    discount,
     couponDiscount,
     appliedCouponCode,
     deliveryCharge,
@@ -106,6 +107,7 @@ export const calculateOrderPrice = asyncHandler(async (req, res) => {
     data: {
       items: pricedItems,
       subtotal,
+      discount,
       couponDiscount,
       couponCode: appliedCouponCode,
       deliveryCharge,
@@ -216,6 +218,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       const {
         pricedItems,
         subtotal,
+        discount,
         couponDiscount,
         appliedCouponCode,
         deliveryCharge,
@@ -381,7 +384,7 @@ export const createOrder = asyncHandler(async (req, res) => {
             products: pricedItems,
 
             subtotal,
-            discount: 0,
+            discount,
             couponCode: appliedCouponCode,
             couponDiscount,
             deliveryCharge,

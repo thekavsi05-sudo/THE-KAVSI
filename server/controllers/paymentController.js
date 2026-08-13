@@ -386,12 +386,12 @@ export const razorpayWebhook = asyncHandler(
            */
           intent.expiresAt = new Date(
             Date.now() +
-            5 *
-            365 *
-            24 *
-            60 *
-            60 *
-            1000
+              5 *
+                365 *
+                24 *
+                60 *
+                60 *
+                1000
           );
 
           await intent.save();
@@ -521,6 +521,12 @@ export const razorpayWebhook = asyncHandler(
         order.refundedAt = new Date();
 
         order.refundFailureReason = '';
+
+        /*
+         * Razorpay has confirmed that the refund
+         * has been processed successfully.
+         */
+        order.paymentStatus = 'Refunded';
 
         await order.save();
 

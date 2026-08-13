@@ -81,8 +81,14 @@ export default function Footer() {
             <li className="flex items-center gap-2">
               <Phone size={14} /> +91 94907 77920
             </li>
-            <li className="flex items-center gap-2">
-              <Mail size={14} /> thekavsi05@gmail.com
+            <li className="flex items-start gap-2">
+              <Mail size={13} className="shrink-0 mt-0.5" />
+              <a
+                href="mailto:thekavsi05@gmail.com"
+                className="break-all hover:text-ivory transition-colors"
+              >
+                thekavsi05@gmail.com
+              </a>
             </li>
           </ul>
         </div>

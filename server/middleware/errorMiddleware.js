@@ -22,6 +22,10 @@ export function errorHandler(err, req, res, next) {
   console.error("Code:", err.code);
   console.error("KeyValue:", err.keyValue);
   console.error("Stack:", err.stack);
+
+  // Show the complete error object
+  console.dir(err, { depth: 10 });
+
   console.error("===================================\n");
 
   // Mongoose bad ObjectId
