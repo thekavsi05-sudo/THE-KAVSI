@@ -7,9 +7,11 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-16 grid grid-cols-2 md:grid-cols-4 gap-10">
         <div className="col-span-2 md:col-span-1">
           <span className="font-display text-2xl">The KAVSI</span>
+
           <p className="text-sm text-ivory/60 mt-4 leading-relaxed">
             Considered women&apos;s clothing, made to be worn — not just bought.
           </p>
+
           <div className="flex gap-4 mt-5">
             <a
               href="https://www.instagram.com/thekavsi?igsh=MTV1ZXJwMmttM29udg=="
@@ -18,6 +20,7 @@ export default function Footer() {
             >
               <Instagram size={18} />
             </a>
+
             <a
               href="#"
               aria-label="Facebook"
@@ -30,17 +33,20 @@ export default function Footer() {
 
         <div>
           <p className="eyebrow text-champagne">Shop</p>
+
           <ul className="mt-4 space-y-2 text-sm text-ivory/70">
             <li>
               <Link to="/shop" className="hover:text-ivory">
                 New Arrivals
               </Link>
             </li>
+
             <li>
               <Link to="/shop" className="hover:text-ivory">
                 Best Sellers
               </Link>
             </li>
+
             <li>
               <Link to="/shop" className="hover:text-ivory">
                 All Products
@@ -51,22 +57,26 @@ export default function Footer() {
 
         <div>
           <p className="eyebrow text-champagne">Company</p>
+
           <ul className="mt-4 space-y-2 text-sm text-ivory/70">
             <li>
               <Link to="/about" className="hover:text-ivory">
                 About Us
               </Link>
             </li>
+
             <li>
               <Link to="/faq" className="hover:text-ivory">
                 FAQ
               </Link>
             </li>
+
             <li>
               <Link to="/contact" className="hover:text-ivory">
                 Contact
               </Link>
             </li>
+
             <li>
               <Link to="/track-order" className="hover:text-ivory">
                 Track Order
@@ -77,15 +87,19 @@ export default function Footer() {
 
         <div>
           <p className="eyebrow text-champagne">Get in Touch</p>
+
           <ul className="mt-4 space-y-2 text-sm text-ivory/70">
             <li className="flex items-center gap-2">
-              <Phone size={14} /> +91 94907 77920
+              <Phone size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">+91 94907 77920</span>
             </li>
+
             <li className="flex items-start gap-2">
               <Mail size={13} className="shrink-0 mt-0.5" />
+
               <a
                 href="mailto:thekavsi05@gmail.com"
-                className="break-all hover:text-ivory transition-colors"
+                className="whitespace-nowrap hover:text-ivory transition-colors"
               >
                 thekavsi05@gmail.com
               </a>
@@ -93,6 +107,7 @@ export default function Footer() {
           </ul>
         </div>
       </div>
+
       <div className="border-t border-ivory/10 py-5 text-center text-xs text-ivory/50">
         © {new Date().getFullYear()} The KAVSI. All rights reserved.
       </div>
