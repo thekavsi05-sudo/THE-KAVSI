@@ -95,11 +95,11 @@ export default function Home() {
             }}
           >
             <Link to="/shop" className="btn-primary">
-              Shop the Edit
+              Shop Now
               <ArrowRight size={16} />
             </Link>
 
-            <Link to="/shop?new=true" className="btn-outline">
+            <Link to="/shop?new=true" className="btn-primary">
               New Arrivals
             </Link>
           </div>

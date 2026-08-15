@@ -21,13 +21,13 @@ export default function Footer() {
               <Instagram size={18} />
             </a>
 
-            <a
+            {/* <a
               href="#"
               aria-label="Facebook"
               className="text-ivory/70 hover:text-champagne transition-colors"
             >
               <Facebook size={18} />
-            </a>
+            </a> */}
           </div>
         </div>
 

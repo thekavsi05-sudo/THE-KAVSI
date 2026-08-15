@@ -9,11 +9,17 @@ export default function About() {
       </section>
       <section className="max-w-3xl mx-auto px-5 md:px-8 py-16 space-y-6 text-ink/80 leading-relaxed">
         <p>
-          The KAVSI began with a simple frustration: too much of women&apos;s
-          fashion is either mass-produced and forgettable, or beautifully made
-          and unreachable. We set out to close that gap — clothing that feels
-          considered, fits with intention, and is priced for real wardrobes, not
-          just lookbooks.
+          The KAVSI is a contemporary ethnic-wear brand bridging the gap between
+          traditional craftsmanship and modern lifestyle needs.{" "}
+        </p>
+        <p>
+          Specializing in premium kurtis, short kurtas, and co-ord sets, the
+          brand is designed for today’s confident generation of women who refuse
+          to compromise on style, comfort, or conscience.{" "}
+        </p>
+        <p>
+          Our Philosophy: "Honoring purity through premium fabric craftsmanship,
+          ensuring every stitch feels as authentic as your heritage."
         </p>
       </section>
       <section className="bg-blush/30 py-16">
